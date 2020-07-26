@@ -11,6 +11,8 @@ class SurfaceCode:
         # MQB:          MEASUREMENT QUBITS
         # n_DQB:        # of DQB on row 0 of the surface code
         # n_MQB:        # of MQB on row 0 of the surface code
+        # m_DQB:        # of DQB on col 0 of the surface code
+        # m_MQB:        # of MQB on col 0 of the surface code
         # MQB_table:    store measurement qubit infos (types and entangled data qubits)
         # circuit:      qiskit quantum circuit
         
