@@ -87,7 +87,25 @@ class SurfaceCode:
     
 
     def build_circuit(self):
-        # TODO: Alex - Qiskit Circuit Generating Code
+        # Generate Qiskit Circuit from the MQB table
+        # TODO: Add Measurements, Test for Correctness
+
+        for i in range(4):
+            for MQB in range(len(self.MQB_table)):
+                if not self.MQB_table[MQB][0]:
+                    if i == 0:
+                        self.circuit.h(MQB)
+                    
+                    if self.MQB_table[MQB][1][i] is not None:
+                        self.circuit.cx(MQB, self.MQB_table[MQB][1][i] + self.number_of_MQB)
+                    
+                    if i == 3:
+                        self.circuit.h(MQB)
+                else:
+                    if self.MQB_table[MQB][1][i] is not None:
+                        self.circuit.cx(self.MQB_table[MQB][1][i] + self.number_of_MQB, MQB)
+            
+            self.circuit.barrier()
         return None
 
 
