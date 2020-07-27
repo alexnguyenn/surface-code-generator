@@ -5,10 +5,11 @@ from qiskit.visualization import *
 class SurfaceCode:
 
 
-    def __init__(self, n, m):
+    def __init__(self, n, m, T=1):
         # n & m MUST BE ODDS NUMBER AND LARGER THAN 3
         # DQB:          DATA QUBITS
         # MQB:          MEASUREMENT QUBITS
+        # T:            # of rounds of syndrome measurements (min & default = 1)
         # n_DQB:        # of DQB on row 0 of the surface code
         # n_MQB:        # of MQB on row 0 of the surface code
         # m_DQB:        # of DQB on col 0 of the surface code
@@ -18,6 +19,7 @@ class SurfaceCode:
         
         self.n = n
         self.m = m
+        self.T = T 
 
         self.n_DQB = int((n + 1) / 2)
         self.m_DQB = int((m + 1) / 2)
@@ -28,10 +30,12 @@ class SurfaceCode:
         self.number_of_DQB = self.n_DQB * self.m_DQB + (self.n_DQB - 1) * self.m_MQB
         self.number_of_MQB = self.n_MQB * self.m_DQB + (self.n_MQB + 1) * self.m_MQB 
         
+        # Initialize the circuit
         self.MQB_table = self.create_MQB_table()
         self.DQB = QuantumRegister(self.number_of_DQB, "data")
         self.MQB = QuantumRegister(self.number_of_MQB, "measure")
-        self.circuit = QuantumCircuit(self.MQB, self.DQB)
+        self.MQB_result = ClassicalRegister(self.T)
+        self.circuit = QuantumCircuit(self.MQB, self.DQB, self.MQB_result)
 
         self.build_circuit()
 
@@ -90,22 +94,34 @@ class SurfaceCode:
         # Generate Qiskit Circuit from the MQB table
         # TODO: Add Measurements, Test for Correctness
 
-        for i in range(4):
+        for i in range(self.T):
+            for j in range(4):
+                for MQB in range(len(self.MQB_table)):
+                    if not self.MQB_table[MQB][0]:
+                        if j == 0:
+                            self.circuit.h(MQB)
+                        
+                        if self.MQB_table[MQB][1][j] is not None:
+                            self.circuit.cx(MQB, self.DQB[self.MQB_table[MQB][1][j]])
+                        
+                        if j == 3:
+                            self.circuit.h(MQB)
+                    else:
+                        if self.MQB_table[MQB][1][j] is not None:
+                            self.circuit.cx(self.DQB[self.MQB_table[MQB][1][j]], MQB)
+                
+                self.circuit.barrier()
+
+            # Syndrome Measurement
             for MQB in range(len(self.MQB_table)):
-                if not self.MQB_table[MQB][0]:
-                    if i == 0:
-                        self.circuit.h(MQB)
-                    
-                    if self.MQB_table[MQB][1][i] is not None:
-                        self.circuit.cx(MQB, self.MQB_table[MQB][1][i] + self.number_of_MQB)
-                    
-                    if i == 3:
-                        self.circuit.h(MQB)
-                else:
-                    if self.MQB_table[MQB][1][i] is not None:
-                        self.circuit.cx(self.MQB_table[MQB][1][i] + self.number_of_MQB, MQB)
+                self.circuit.measure(MQB, self.MQB_result[i])
+                
+                if i < self.T - 1:
+                    self.circuit.reset(MQB)
             
             self.circuit.barrier()
+
+
         return None
 
 
