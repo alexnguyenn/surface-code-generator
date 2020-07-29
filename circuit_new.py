@@ -13,6 +13,7 @@ class RotatedSurfaceCode:
         self.MQB = QuantumRegister(d**2 - 1, 'measure')
         self.DQB = QuantumRegister(d**2, "data")
         self.results = []
+        self.DQB_cr = ClassicalRegister(d**2, 'data_output')
         
         self.circuit = QuantumCircuit(self.MQB, self.DQB)
         self.coord_table = self.generate_lattice()
@@ -55,7 +56,7 @@ class RotatedSurfaceCode:
                 
                 # Encode 3 qubits
                 for j in range(d - 1):
-                    coord_table[0][(j + 0.5 , i + 0.5)] = (1 if j % 2 == 0 else 2, curr_MQB)
+                    coord_table[0][(j + 0.5 , i + 0.5)] = (2 if j % 2 == 0 else 1, curr_MQB)
                     curr_MQB += 1
 
         # Row d - 0.5 (last row)
@@ -154,13 +155,18 @@ class RotatedSurfaceCode:
                             self.circuit.cx(self.DQB[MQB_table[MQB][1][j]], MQB)
             
                 self.circuit.barrier()
-            self.syndrome_measurement(i)
-            if i != self.T - 1:
-                self.circuit.barrier()
+            self.syndrome_measurement(i, MQB_table)
+            # if i != self.T - 1:
+            #     self.circuit.barrier()
+
+        # DQB Measurements
+        self.circuit.add_register(self.DQB_cr)
+        for i in range(self.d**2):
+            self.circuit.measure(self.DQB[i], self.DQB_cr[i])
 
         return 1
 
-    def syndrome_measurement(self, T):
+    def syndrome_measurement(self, T, MQB_table):
         # Add syndrome measurement round onto the circuit
         self.results.append(
             ClassicalRegister((self.d ** 2 - 1), "round_" + str(T))
@@ -169,6 +175,14 @@ class RotatedSurfaceCode:
         self.circuit.add_register(self.results[T])
         
         for i in range(self.d**2 - 1):
-            self.circuit.measure(self.MQB[i], self.results[T][i])
+            if MQB_table[i][0]:
+                self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
         
+        self.circuit.barrier()
+
+        for i in range(self.d**2 - 1):
+            if not MQB_table[i][0]: 
+                self.circuit.measure(self.MQB[i], self.results[T][i])
+            self.circuit.reset(self.MQB[i])
+            
