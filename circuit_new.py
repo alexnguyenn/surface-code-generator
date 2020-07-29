@@ -12,7 +12,8 @@ class RotatedSurfaceCode:
 
         self.MQB = QuantumRegister(d**2 - 1, 'measure')
         self.DQB = QuantumRegister(d**2, "data")
-
+        self.results = []
+        
         self.circuit = QuantumCircuit(self.MQB, self.DQB)
         self.coord_table = self.generate_lattice()
         self.build_circuit()
@@ -153,5 +154,21 @@ class RotatedSurfaceCode:
                             self.circuit.cx(self.DQB[MQB_table[MQB][1][j]], MQB)
             
                 self.circuit.barrier()
+            self.syndrome_measurement(i)
+            if i != self.T - 1:
+                self.circuit.barrier()
 
         return 1
+
+    def syndrome_measurement(self, T):
+        # Add syndrome measurement round onto the circuit
+        self.results.append(
+            ClassicalRegister((self.d ** 2 - 1), "round_" + str(T))
+        )
+
+        self.circuit.add_register(self.results[T])
+        
+        for i in range(self.d**2 - 1):
+            self.circuit.measure(self.MQB[i], self.results[T][i])
+            self.circuit.reset(self.MQB[i])
+        
