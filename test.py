@@ -42,13 +42,19 @@ for i in code.build_MQB_table():
 # code.draw_lattice().render(format="png", view="true")
 
 # Excuting circuit
-job = execute(code.circuit, simulator)
+job = execute(code.circuit, simulator, noise_model = get_noise(0,0))
 
 raw_results = {}
 raw_results = job.result().get_counts()
 
 # Get the most common result
+print("raw results:")
 print(raw_results)
+print()
+print("histogram:")
+print(code.qubit_histogram(raw_results))
+print()
+print("most common method:")
 print(max(raw_results, key=raw_results.get))
 
 # print(code.circuit.draw())

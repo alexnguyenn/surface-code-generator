@@ -14,7 +14,7 @@ class RotatedSurfaceCode:
         self.MQB = QuantumRegister(d**2 - 1, 'measure')
         self.DQB = QuantumRegister(d**2, "data")
         self.results = []
-        self.DQB_cr = ClassicalRegister(d**2, 'data_output')
+        # self.DQB_cr = ClassicalRegister(d**2, 'data_output')
         
         self.circuit = QuantumCircuit(self.MQB, self.DQB)
         self.coord_table = self.generate_lattice()
@@ -144,9 +144,9 @@ class RotatedSurfaceCode:
             #     self.circuit.barrier()
 
         # DQB Measurements
-        self.circuit.add_register(self.DQB_cr)
-        for i in range(self.d**2):
-            self.circuit.measure(self.DQB[i], self.DQB_cr[i])
+        # self.circuit.add_register(self.DQB_cr)
+        # for i in range(self.d**2):
+        #     self.circuit.measure(self.DQB[i], self.DQB_cr[i])
 
         return 1
 
@@ -172,6 +172,34 @@ class RotatedSurfaceCode:
                 self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
             
+
+
+    def print_result(self, raw_results):
+        # Author: George Watkins
+        # TODO: Update the lattice diagram based on raw_results
+
+        for iteration_readout in list(raw_results.keys())[0].split(" "):
+            s = ""
+            for mpos in range(len(iteration_readout)):
+                s += "M"+str(mpos) + ": " + iteration_readout[mpos] +" "
+            print(s)
+
+
+
+    def qubit_histogram(self, results_dict):
+        # Author: George Watkins
+        assert len(results_dict) > 0
+        
+        
+        num_qubits = len("".join(list(results_dict.keys())[0].split(" ")))
+        
+        readout_counts =  [ 0 for i in range(num_qubits) ]
+        
+        
+        for res, count in results_dict.items():
+            for i in range(num_qubits):
+                readout_counts[i] += int("".join(res.split(" "))[i])*count
+        return readout_counts
 
 
 
