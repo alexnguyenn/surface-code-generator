@@ -61,7 +61,7 @@ class RotatedSurfaceCode:
 
         # Row d - 0.5 (last row)
         for i in range(1, d - 1, 2):
-            coord_table[0][(d - 0.5, i + 0.5)] = (2, curr_MQB) 
+            coord_table[0][(i + 0.5, d - 0.5)] = (2, curr_MQB) 
             curr_MQB += 1
 
         # DQB Encode:
