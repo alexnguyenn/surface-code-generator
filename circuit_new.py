@@ -194,7 +194,7 @@ class RotatedSurfaceCode:
         Return: a graphviz.Graph object
         """
         # Author: Nicholas
-        # Version: 0.2
+        # Version: 0.2.1
         
         # graph construction is now reliant on internal coordinates
         # current layout: 2020-07-29 2:00 pm PT (horizontal flip, square)
@@ -208,9 +208,9 @@ class RotatedSurfaceCode:
             
         def add_edge(graph, isZ, tail, head):
             if isZ:
-                graph.edge(tail, head, color="green",  label="Z")
+                graph.edge(tail, head, color="green")
             else:
-                graph.edge(tail, head, color="orange", label="X")
+                graph.edge(tail, head, color="orange")
         
         visual = Graph(name="lattice", engine="fdp", strict=True)
         visual.attr(splines = "false",nodesep = "0.6")
