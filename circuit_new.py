@@ -138,7 +138,7 @@ class RotatedSurfaceCode:
                         if MQB_table[MQB][1][j] is not None:
                             self.circuit.cx(self.DQB[MQB_table[MQB][1][j]], MQB)
             
-                self.circuit.barrier()
+                # self.circuit.barrier()
             self.syndrome_measurement(i, MQB_table)
             # if i != self.T - 1:
             #     self.circuit.barrier()
@@ -154,6 +154,7 @@ class RotatedSurfaceCode:
 
     def syndrome_measurement(self, T, MQB_table):
         # Add syndrome measurement round onto the circuit
+        self.circuit.barrier()
         self.results.append(
             ClassicalRegister((self.d ** 2 - 1), "round_" + str(T))
         )
@@ -163,14 +164,15 @@ class RotatedSurfaceCode:
         for i in range(self.d**2 - 1):
             if MQB_table[i][0]:
                 self.circuit.measure(self.MQB[i], self.results[T][i])
-            self.circuit.reset(self.MQB[i])
+            # self.circuit.reset(self.MQB[i])
         
-        self.circuit.barrier()
+        # self.circuit.barrier()
 
         for i in range(self.d**2 - 1):
             if not MQB_table[i][0]: 
                 self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
+        self.circuit.barrier()
             
 
 
