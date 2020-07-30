@@ -1,24 +1,26 @@
 from circuit_new import RotatedSurfaceCode
 from qiskit import execute, Aer
-from qiskit.providers.aer.noise import NoiseModel
-from qiskit.providers.aer.noise.errors import pauli_error, depolarizing_error
+import qiskit.providers.aer.noise as noise
 
-simulator = Aer.get_backend('statevector_simulator')
+simulator = Aer.get_backend('qasm_simulator')
 
-def get_noise(p_meas,p_gate):
+def get_noise(p1,p2):
 
-    error_meas = pauli_error([('X',p_meas), ('I', 1 - p_meas)])
-    error_gate1 = depolarizing_error(p_gate, 1)
-    error_gate2 = error_gate1.tensor(error_gate1)
+    prob_1 = p1  # 1-qubit gate
+    prob_2 = p2   # 2-qubit gate
 
-    noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(0, "measure") # measurement error is applied to measurements
-    noise_model.add_all_qubit_quantum_error(0, ["x"]) # single qubit gate error is applied to x gates
-    noise_model.add_all_qubit_quantum_error(0, ["cx"]) # two qubit gate error is applied to cx gates
-        
+    # Depolarizing quantum errors
+    error_1 = noise.depolarizing_error(prob_1, 1)
+    error_2 = noise.depolarizing_error(prob_2, 2)
+
+    # Add errors to noise model
+    noise_model = noise.NoiseModel()
+    noise_model.add_all_qubit_quantum_error(error_1, ['u1', 'u2', 'u3'])
+    noise_model.add_all_qubit_quantum_error(error_2, ['cx'])
+    
     return noise_model
 
-code = RotatedSurfaceCode(3, 1)
+code = RotatedSurfaceCode(3, 3)
 print()
 
 # for i,j in code.coord_table[0].items():
@@ -47,6 +49,7 @@ raw_results = job.result().get_counts()
 
 # Get the most common result
 print(raw_results)
+print(max(raw_results, key=raw_results.get))
 
 # print(code.circuit.draw())
 # code1 = SurfaceCode(3, 3, 2)
