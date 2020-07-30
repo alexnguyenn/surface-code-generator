@@ -117,23 +117,6 @@ class RotatedSurfaceCode:
 
 
 
-    def build_MQB_table_old(self):
-        # Compatitble with Nicholas's draw_lattice(), will be removed in later version
-        # ONLY use this when working with draw_lattice()
-        MQB_table = [None] * (self.d**2 - 1)
-        
-        for coord, MQB in self.coord_table[0].items():
-            index = MQB[1]
-            isZ = MQB[0] == 1
-            DQB = self.get_DQB(coord)
-            
-            # Use old NWSE ordering (equivalent to adcb)
-            MQB_table[index] = (isZ, (DQB[0], DQB[3], DQB[2], DQB[1]))
-                
-        return MQB_table
-
-
-
     def build_circuit(self):
         # Generate Qiskit Circuit
         MQB_table = self.build_MQB_table()
@@ -167,6 +150,8 @@ class RotatedSurfaceCode:
 
         return 1
 
+
+
     def syndrome_measurement(self, T, MQB_table):
         # Add syndrome measurement round onto the circuit
         self.results.append(
@@ -187,6 +172,9 @@ class RotatedSurfaceCode:
                 self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
             
+
+
+
     def draw_lattice(self):
         """
         Visualizes the surface code.
