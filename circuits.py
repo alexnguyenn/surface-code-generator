@@ -1,3 +1,4 @@
+from graphviz import Graph
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.compiler import transpile, assemble
 from qiskit.visualization import *
@@ -128,5 +129,208 @@ class SurfaceCode:
 
     
     def draw_lattice(self):
-        # TODO: Nicholas - Visualizing the surface code
-        return None
+        """
+        Visualizes the surface code.
+        
+        Return: a graphviz.Graph object
+        """
+        # Author: Nicholas
+        # Version: 0.1
+        
+        # graph construction is hardcoded to force expected appearance
+        # current layout: 2020-07-28 2:00 am PT (diagonal, external mqb)
+        # current structure does not support diagonals
+        # current implementation ignores MQB_table entirely
+        # requirements: graphviz (package and 3rd-party python library)
+        # the Graph object can, for example, do the following:
+            # g.source -> string that can be plugged into a graphviz compiler
+            # g.render() -> produces an image (can be specified)
+            # g (in Jupyter notebook) -> displays an SVG
+        
+        # TODO:    replace 4 of the below constants 
+        #          once surface code layout finalized
+        _c = 3 # number of columns (must be odd)
+        _r = 3 # number of rows (must be odd)
+        _dqb = _c * _r  #self.number_of_DQB
+        _mqb = _dqb - 1 #self.number_of_MQB
+        _outer_len = _c // 2 # number of MQB along the outer layer
+        
+        visual = Graph(name="lattice", engine="dot", strict=True)
+        visual.attr(splines = "false",nodesep = "0.6",ranksep = "0.02")
+        visual.attr("node", shape="circle", fixedsize="true", width="0.6")
+        visual.attr("edge", penwidth="10")
+        
+        # create nodes
+        # black measurement qubits
+        with visual.subgraph() as mqb:
+            mqb.attr("node", style="filled", fontcolor="white", color="black")
+            for q in range(_mqb):
+                mqb.node("M"+str(q))
+        
+        # white data qubits
+        with visual.subgraph() as dqb:
+            for q in range(_dqb):
+                dqb.node("D"+str(q))
+        
+        # order nodes' hierarchy
+        for r in range(1,_r):
+            with visual.subgraph(name="rank"+str(r)) as s:
+                s.attr(rank="same")
+                offset = _c * (r-1) + _outer_len
+                for c in range(_c):
+                    s.node("M"+str(offset+c))
+        
+        with visual.subgraph(name="rank0") as s:
+            for c in range(_outer_len):
+                s.node("M"+str(c))
+                
+        with visual.subgraph(name="rank"+str(_r)):
+            for c in range(_outer_len):
+                s.node("M"+str(_mqb - c - 1))
+        
+        # create edges
+        # notating X-gate
+        visual.attr("edge", color="orange", label="X")
+        
+        # rank0:
+            # 0--1,2; 1--3,4; 2--5,6
+            #   = n--   (2n+1),(2n+2)
+        
+        for mqb in range(_outer_len):
+            name = "M"+str(mqb)
+            visual.edge(name, "D"+str(2*mqb+1))
+            visual.edge(name, "D"+str(2*mqb+2))
+        
+        # odd-ranked X:
+            # offset: _c * (cur_r-1)
+            # mqb_offset: _outer_len
+            # X is every "even" in this row
+            # o+mqb_o+1 -- o+0, o+1, o+_c+0, o+_c+1
+            # o+mqb_o+3 -- o+2, o+3, o+_c+2, o+_c+3
+            #   = o+mqb_o+n--   (offset + n - 1),       (offset + n),
+            #                   (offset + _c + n - 1),  (offset + _c + n)
+        
+        for r in range(1, _r, 2):
+            offset = _c * (r-1)
+            mqb_offset = offset + _outer_len
+            for mqb in range(1, _c, 2):
+                name = "M"+str(mqb_offset+mqb)
+                visual.edge("D"+str(offset + mqb - 1), name)
+                visual.edge("D"+str(offset + mqb), name)
+                visual.edge(name, "D"+str(offset + mqb + _c - 1))
+                visual.edge(name, "D"+str(offset + mqb + _c))
+        
+        # even-ranked X:
+            # offset: _c * (cur_r-1)
+            # mqb_offset: _outer_len
+            # X is every "even" in this row
+            # o+mqb_o+1 -- o+1, o+2, o+_c+1, o+_c+2
+            # o+mqb_o+3 -- o+3, o+4, o+_c+3, o+_c+4
+            #   = o+mqb_o+n--   (offset + n),       (offset + n + 1),
+            #                   (offset + _c + n),  (offset + _c + n + 1)
+            
+        for r in range(2, _r, 2):
+            offset = _c * (r-1)
+            mqb_offset = offset + _outer_len
+            for mqb in range(1, _c, 2):
+                name = "M"+str(mqb_offset+mqb)
+                visual.edge("D"+str(offset + mqb), name)
+                visual.edge("D"+str(offset + mqb + 1), name)
+                visual.edge(name, "D"+str(offset + mqb + _c))
+                visual.edge(name, "D"+str(offset + mqb + _c + 1))
+        
+        # rank(_r):
+            # offset: _c * (_r-1)
+            # mqb_offset: _outer_len
+            # o+mqb_o+0 -- o+0, o+1
+            # o+mqb_o+1 -- o+2, o+3
+            #   = o+mqb_o+n--   (o+2n),(o+2n+1)
+        
+        for mqb in range(_outer_len):
+            offset = _c * (_r-1)
+            mqb_offset = offset + _outer_len
+            name = "M"+str(mqb_offset+mqb)
+            visual.edge("D"+str(offset+2*mqb), name)
+            visual.edge("D"+str(offset+2*mqb+1), name)
+        
+        # notating Z-gate
+        visual.attr("edge", color="green", label="Z")
+        
+        # odd-ranked Z:
+            # offset: _c * (cur_r-1)
+            # mqb_offset: _outer_len
+            # Z is every "odd" in this row
+            # first MQB only entangled with 2 instead of 4
+            # o+mqb_o+0 -- o+0, o+_c+0
+            # o+mqb_o+2 -- o+1, o+2, o+_c+1, o+_c+2
+            #   = o+mqb_o+n--   (offset + n - 1),       (offset + n),
+            #                   (offset + _c + n - 1),  (offset + _c + n)
+            #   if n > 0
+            
+        for r in range(1, _r, 2):
+            offset = _c * (r-1)
+            mqb_offset = offset + _outer_len
+            
+            visual.edge("D"+str(offset), 
+                        "M"+str(mqb_offset), 
+                        constraint="false")
+            visual.edge("M"+str(mqb_offset), 
+                        "D"+str(offset+_c), 
+                        constraint="false")
+            
+            for mqb in range(2, _c, 2):
+                name = "M"+str(mqb_offset+mqb)
+                visual.edge("D"+str(offset + mqb - 1), name)
+                visual.edge("D"+str(offset + mqb), name)
+                visual.edge(name, "D"+str(offset + mqb + _c - 1))
+                visual.edge(name, "D"+str(offset + mqb + _c))
+        
+        # even-ranked Z:
+            # offset: _c * (cur_r-1)
+            # mqb_offset: _outer_len
+            # Z is every "odd" in this row
+            # last MQB only entangled with 2 instead of 4
+            # o+mqb_o+0 -- o+0, o+1, o+_c+0, o+_c+1
+            # o+mqb_o+2 -- o+2, o+3, o+_c+2, o+_c+3
+            #   = o+mqb_o+n--   (offset + n),       (offset + n + 1),
+            #                   (offset + _c + n),  (offset + _c + n + 1)
+            #   if n < _c-1
+            # o+mqb_o+_c-1 -- o+_c-1, o+_c+_c-1
+        
+        for r in range(2, _r, 2):
+            offset = _c * (r-1)
+            mqb_offset = offset + _outer_len
+            for mqb in range(0, _c-1, 2):
+                name = "M"+str(mqb_offset+mqb)
+                visual.edge("D"+str(offset + mqb), name)
+                visual.edge("D"+str(offset + mqb + 1), name)
+                visual.edge(name, "D"+str(offset + mqb + _c))
+                visual.edge(name, "D"+str(offset + mqb + _c + 1))
+            
+            visual.edge("D"+str(offset + _c - 1),
+                        "M"+str(mqb_offset + _c - 1),
+                        constraint="false")
+            visual.edge("M"+str(mqb_offset + _c - 1),
+                        "D"+str(offset + 2*_c - 1),
+                        constraint="false")
+        
+        return visual
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

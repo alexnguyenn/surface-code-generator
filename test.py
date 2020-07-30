@@ -37,6 +37,8 @@ for i in code.build_MQB_table():
 
 # code.print_MQB_table()
 
+# code.draw_lattice().render(format="png", view="true")
+
 # Excuting circuit
 job = execute(code.circuit, simulator)
 

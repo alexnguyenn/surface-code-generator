@@ -1,3 +1,4 @@
+from graphviz import Graph
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.compiler import transpile, assemble
 from qiskit.visualization import *
@@ -185,4 +186,76 @@ class RotatedSurfaceCode:
             if not MQB_table[i][0]: 
                 self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
+            
+    def draw_lattice(self):
+        """
+        Visualizes the surface code.
+        
+        Return: a graphviz.Graph object
+        """
+        # Author: Nicholas
+        # Version: 0.2
+        
+        # graph construction is now reliant on internal coordinates
+        # current layout: 2020-07-29 2:00 pm PT (horizontal flip, square)
+        # requirements: graphviz (package and 3rd-party python library)
+            # specifically "fdp" engine, which requires version 2.38
+            # on windows, due to a bug in the recent release
+        # the Graph object can, for example, do the following:
+            # g.source -> string that can be plugged into a graphviz compiler
+            # g.render() -> produces an image (can be specified)
+            # g (in Jupyter notebook) -> displays an SVG
+            
+        def add_edge(graph, isZ, tail, head):
+            if isZ:
+                graph.edge(tail, head, color="green",  label="Z")
+            else:
+                graph.edge(tail, head, color="orange", label="X")
+        
+        visual = Graph(name="lattice", engine="fdp", strict=True)
+        visual.attr(splines = "false",nodesep = "0.6")
+        visual.attr("node", shape="circle", fixedsize="true", width="0.6")
+        visual.attr("edge", penwidth="10")
+        
+        # create nodes
+        # y-coord must be flipped due to implementation
+        
+        # white data qubits
+        with visual.subgraph() as dqb:
+            for coord, DQB in self.coord_table[1].items():
+                index = DQB[1]
+                node_pos = "%f,%f!" % (coord[0], -coord[1])
+                dqb.node("D"+str(index), pos=node_pos)
+        
+        # black measurement qubits
+        with visual.subgraph() as mqb:
+            mqb.attr("node", style="filled", fontcolor="white", color="black")
+            for coord, MQB in self.coord_table[0].items():
+                index = MQB[1]
+                node_pos = "%f,%f!" % (coord[0], -coord[1])
+                mqb.node("M"+str(index), pos=node_pos)
+        
+        # create edges
+        MQB_table = self.build_MQB_table()
+        for i in range(self.d**2 - 1):
+            MQB = MQB_table[i]
+            isZ = MQB[0]
+            DQB = MQB[1]
+            name = "M"+str(i)
+            
+            a = DQB[0]
+            c = DQB[3]
+            if isZ: #abdc
+                b = DQB[1]
+                d = DQB[2]
+            else:   #adbc
+                d = DQB[1]
+                b = DQB[2]
+                
+            if a != None: add_edge(visual, isZ, "D"+str(a), name)
+            if b != None: add_edge(visual, isZ, "D"+str(b), name)
+            if c != None: add_edge(visual, isZ, name, "D"+str(c))
+            if d != None: add_edge(visual, isZ, name, "D"+str(d))
+        
+        return visual
             
