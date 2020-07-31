@@ -160,18 +160,13 @@ class RotatedSurfaceCode:
         )
 
         self.circuit.add_register(self.results[T])
-        
-        for i in range(self.d**2 - 1):
-            if MQB_table[i][0]:
-                self.circuit.measure(self.MQB[i], self.results[T][i])
-            # self.circuit.reset(self.MQB[i])
-        
+                
         # self.circuit.barrier()
 
         for i in range(self.d**2 - 1):
-            if not MQB_table[i][0]: 
-                self.circuit.measure(self.MQB[i], self.results[T][i])
+            self.circuit.measure(self.MQB[i], self.results[T][i])
             self.circuit.reset(self.MQB[i])
+        
         self.circuit.barrier()
             
 
