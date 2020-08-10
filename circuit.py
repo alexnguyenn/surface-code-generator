@@ -4,8 +4,24 @@ from qiskit.compiler import transpile, assemble
 from qiskit.visualization import *
 
 class RotatedSurfaceCode:
+    """
+    Circuit Generator for Rotated Surface Code (Qiskit).
+    """
 
     def __init__(self, d, T=1, logic_0=True):
+        """
+        Generate circuit for rotated circuit code of distance d over T
+        measurement rounds.
+
+        Note: 
+            Circuit can be accessed in RotatedSurfaceCode.circuit
+
+        Args:
+            d (int): Code distance - Must be odd and larger than 3.
+            T (int, optional): Number of Measurement Rounds. Defaults to 1.
+            logic_0 (bool, optional): Implementing logical 0. Defaults to True.
+        """
+        # Author: Alex Nguyen
 
         self.logic_0 = logic_0
         self.d = d
@@ -14,7 +30,6 @@ class RotatedSurfaceCode:
         self.MQB = QuantumRegister(d**2 - 1, 'measure')
         self.DQB = QuantumRegister(d**2, "data")
         self.results = []
-        # self.DQB_cr = ClassicalRegister(d**2, 'data_output')
         
         self.circuit = QuantumCircuit(self.MQB, self.DQB)
         self.coord_table = self.generate_lattice()
@@ -23,8 +38,18 @@ class RotatedSurfaceCode:
 
 
     def generate_lattice(self):
-        # coord_table[(x, y)] = (qubit type, index in MQB/DQB)
-        # 0 - DATA QUBIT, 1 - Z-MQB, 2 - X-MQB
+        """
+        Map coordinates to qubits. 
+
+        Returns:
+            Table containing coordinates for measurement qubits and
+            data qubits.
+        """
+        # Author: Alex Nguyen
+
+        # coord_table[0] - DQB, coord_table[1] - MQB
+        # coord_table[i][(x, y)] = (qubit type, index in MQB/DQB)
+        # QUBIT TYPE: 0 - DATA QUBIT, 1 - Z-MQB, 2 - X-MQB
         
         coord_table = [dict() for x in range(2)]
         curr_MQB = 0
@@ -32,7 +57,7 @@ class RotatedSurfaceCode:
         d = self.d 
 
         # MQB encoding
-        # TODO: Check the xy logic again
+
         # Row -0.5
         for i in range(0, d - 1, 2):
             coord_table[0][(i + 0.5, -0.5)] = (2, curr_MQB)
@@ -71,19 +96,31 @@ class RotatedSurfaceCode:
                 coord_table[1][(j, i)] = (0, curr_DQB)
                 curr_DQB += 1
         
-        print("curr MQB: " + str(curr_MQB))
-        print("curr DQB: " + str(curr_DQB))
+        print("MQB count: " + str(curr_MQB))
+        print("DQB count: " + str(curr_DQB))
 
         return coord_table
     
 
 
     def get_DQB(self, coord):
+        """
+        Generate list of surrounding data qubits for ONE measurement qubit.
+
+        Args:
+            coord (tuple): Coordinates of a measurement qubit.
+
+        Returns:
+            List of corresponding data qubits. 
+        """
+        # Author: Alex Nguyen
+
         # Return DQB indicies from MQB coordinates
         #        a---b
         #        | M |
         #        d---c  
-        # Format in a,b,c,d order
+        # Format in a, b, c, d order
+        
         ret_val = []
         a = (coord[0] - 0.5, coord[1] - 0.5)
         b = (coord[0] + 0.5, coord[1] - 0.5)
@@ -100,6 +137,15 @@ class RotatedSurfaceCode:
 
 
     def build_MQB_table(self):
+        """
+        Build measurement qubits information table. 
+
+        Returns:
+            Table containing measurement qubits' types and lists of entangled
+            data qubits (ordered based on the ZN rule).
+        """
+        # Author: Alex Nguyen
+
         MQB_table = [None] * (self.d**2 - 1)
         
         for coord, MQB in self.coord_table[0].items():
@@ -107,6 +153,7 @@ class RotatedSurfaceCode:
             isZ = MQB[0] == 1
             DQB = self.get_DQB(coord)
             
+            # Build the list of entangled data qubits for build_circuit().
             # ZN ordering: Z_MQB uses abdc ordering, X_MQB uses adbc ordering
             if isZ:
                 MQB_table[index] = (isZ, (DQB[0], DQB[1], DQB[3], DQB[2]))
@@ -118,8 +165,18 @@ class RotatedSurfaceCode:
 
 
     def build_circuit(self):
+        """
+        Generate the circuit.
+        """
+        # Author: Alex Nguyen
+
         # Generate Qiskit Circuit
         MQB_table = self.build_MQB_table()
+
+        # Logical 1
+        if not self.logic_0:
+            for DQB in self.DQB:
+                self.circuit.x(DQB)
         
         for i in range(self.T):
             for j in range(4):
@@ -139,20 +196,19 @@ class RotatedSurfaceCode:
                             self.circuit.cx(self.DQB[MQB_table[MQB][1][j]], MQB)
             
                 # self.circuit.barrier()
-            self.syndrome_measurement(i, MQB_table)
+            self.syndrome_measurement(i)
             # if i != self.T - 1:
             #     self.circuit.barrier()
 
-        # DQB Measurements
-        # self.circuit.add_register(self.DQB_cr)
-        # for i in range(self.d**2):
-        #     self.circuit.measure(self.DQB[i], self.DQB_cr[i])
-
-        return 1
 
 
+    def syndrome_measurement(self, T):
+        """
+        Apply a single measurement round on the circuit.
 
-    def syndrome_measurement(self, T, MQB_table):
+        Args:
+            T (int): current measurement round.
+        """
         # Add syndrome measurement round onto the circuit
         self.circuit.barrier()
         self.results.append(
@@ -173,7 +229,6 @@ class RotatedSurfaceCode:
 
     def print_result(self, raw_results):
         # Author: George Watkins
-        # TODO: Update the lattice diagram based on raw_results
 
         for iteration_readout in list(raw_results.keys())[0].split(" "):
             s = ""
@@ -183,29 +238,13 @@ class RotatedSurfaceCode:
 
 
 
-    def qubit_histogram(self, results_dict):
-        # Author: George Watkins
-        assert len(results_dict) > 0
-        
-        
-        num_qubits = len("".join(list(results_dict.keys())[0].split(" ")))
-        
-        readout_counts =  [ 0 for i in range(num_qubits) ]
-        
-        
-        for res, count in results_dict.items():
-            for i in range(num_qubits):
-                readout_counts[i] += int("".join(res.split(" "))[i])*count
-        return readout_counts
-
-
-
     def draw_lattice(self):
         """
         Visualizes the surface code.
-        
-        Return: a graphviz.Graph object
-        """
+
+        Returns:
+            A graphviz.Graph object
+        """     
         # Author: Nicholas
         # Version: 0.2.1
         
