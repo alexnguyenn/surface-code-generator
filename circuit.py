@@ -228,6 +228,13 @@ class RotatedSurfaceCode:
 
 
     def print_result(self, raw_results):
+        """
+        Print measurement results from execution
+
+        Args:
+            raw_results (dict): Can be generated using get_counts() method of
+            qiskit.Result object (obtained via executing the circuit).
+        """
         # Author: George Watkins
 
         for iteration_readout in list(raw_results.keys())[0].split(" "):
